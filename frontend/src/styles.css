@@ -1,0 +1,92 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color: #193154;
+  background: #f2f7fd;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.centered-container {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.page-container {
+  min-height: 100vh;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 960px;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(25, 49, 84, 0.16);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+
+input,
+button,
+select {
+  border-radius: 10px;
+  border: 1px solid #c4d4eb;
+  padding: 0.7rem 0.9rem;
+  font-size: 1rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: #2f6fb6;
+  color: white;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.7;
+}
+
+button.danger {
+  background: #c23030;
+}
+
+.error {
+  color: #c23030;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #d9e5f5;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+
+.search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+}
