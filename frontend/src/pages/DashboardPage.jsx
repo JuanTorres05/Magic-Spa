@@ -1,26 +1,32 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-export const DashboardPage = () => {
-  const navigate = useNavigate();
+const QUICK_LINKS = [
+  { to: '/employees', icon: '👩‍🎨', label: 'Empleadas', desc: 'Gestión del equipo' },
+  { to: '/clients', icon: '💝', label: 'Clientas', desc: 'Base de clientas' },
+  { to: '/services', icon: '✨', label: 'Servicios', desc: 'Catálogo de servicios' },
+  { to: '/appointments', icon: '📅', label: 'Citas', desc: 'Agenda del día' },
+  { to: '/payments', icon: '💳', label: 'Pagos', desc: 'Historial de cobros' },
+  { to: '/reports', icon: '📊', label: 'Reportes', desc: 'Estadísticas' },
+];
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    navigate('/login', { replace: true });
-  };
+export const DashboardPage = () => (
+  <div>
+    <div className="page-header">
+      <h1>¡Bienvenida a Magic Spa! ✨</h1>
+      <p>Selecciona una sección para comenzar</p>
+    </div>
 
-  return (
-    <section className="centered-container">
-      <div className="card">
-        <h1>Dashboard</h1>
-        <p>Autenticación HU-01 completada.</p>
-        <p><Link to="/employees">Ir a HU-02 · Gestión de Empleados</Link></p>
-        <p><Link to="/clients">Ir a HU-03 · Gestión de Clientes</Link></p>
-        <p><Link to="/services">Ir a HU-04 · Gestión de Servicios</Link></p>
-        <p><Link to="/appointments">Ir a HU-05 · Gestión de Citas</Link></p>
-        <p><Link to="/payments">Ir a HU-06 · Registro de Pagos</Link></p>
-        <p><Link to="/reports">Ir a HU-07 · Reportes Básicos</Link></p>
-        <button type="button" onClick={logout}>Cerrar sesión</button>
-      </div>
-    </section>
-  );
-};
+    <div className="stat-grid">
+      {QUICK_LINKS.map((item) => (
+        <Link key={item.to} to={item.to} className="stat-card">
+          <div className="stat-card-icon">{item.icon}</div>
+          <div className="stat-card-label">{item.label}</div>
+          <div style={{ fontSize: '.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {item.desc}
+          </div>
+          <div className="stat-card-arrow">→ Ver más</div>
+        </Link>
+      ))}
+    </div>
+  </div>
+);

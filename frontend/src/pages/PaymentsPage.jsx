@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import { formatCOP } from '../utils/format.js';
 
-const initialForm = {
-  appointmentId: '',
-  monto: '',
-  metodoPago: 'efectivo',
-  fecha: '',
-  referencia: ''
+const initialForm = { appointmentId: '', monto: '', metodoPago: 'efectivo', fecha: '', referencia: '' };
+
+const METODO_ICONS = {
+  efectivo: '💵', tarjeta: '💳', transferencia: '🏦', otro: '💰'
 };
 
 export const PaymentsPage = () => {
@@ -18,115 +16,152 @@ export const PaymentsPage = () => {
   const [error, setError] = useState('');
 
   const loadData = async () => {
-    const [paymentsRes, appointmentsRes] = await Promise.all([api.get('/payments'), api.get('/appointments')]);
-    setPayments(paymentsRes.data);
-    setAppointments(appointmentsRes.data);
+    const [p, a] = await Promise.all([api.get('/payments'), api.get('/appointments')]);
+    setPayments(p.data); setAppointments(a.data);
   };
 
-  useEffect(() => {
-    loadData().catch(() => setError('No se pudo cargar pagos'));
-  }, []);
+  useEffect(() => { loadData().catch(() => setError('No se pudo cargar pagos')); }, []);
 
-  const onChange = (event) => {
-    setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
-  };
+  const onChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const submit = async (event) => {
-    event.preventDefault();
-    setError('');
+  const submit = async (e) => {
+    e.preventDefault(); setError('');
     try {
-      if (editingId) {
-        await api.put(`/payments/${editingId}`, form);
-      } else {
-        await api.post('/payments', form);
-      }
-      setForm(initialForm);
-      setEditingId(null);
-      await loadData();
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || 'No se pudo guardar pago');
-    }
+      editingId
+        ? await api.put(`/payments/${editingId}`, form)
+        : await api.post('/payments', form);
+      setForm(initialForm); setEditingId(null); await loadData();
+    } catch (err) { setError(err.response?.data?.message || 'No se pudo guardar pago'); }
   };
 
   const edit = (item) => {
     setEditingId(item.id);
     setForm({
-      appointmentId: String(item.appointmentId),
-      monto: item.monto,
+      appointmentId: String(item.appointmentId), monto: item.monto,
       metodoPago: item.metodoPago,
       fecha: new Date(item.fecha).toISOString().slice(0, 16),
       referencia: item.referencia || ''
     });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const cancel = () => { setEditingId(null); setForm(initialForm); setError(''); };
 
   const remove = async (id) => {
+    if (!confirm('¿Eliminar este pago?')) return;
     setError('');
-    try {
-      await api.delete(`/payments/${id}`);
-      await loadData();
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || 'No se pudo eliminar pago');
-    }
+    try { await api.delete(`/payments/${id}`); await loadData(); }
+    catch (err) { setError(err.response?.data?.message || 'No se pudo eliminar'); }
   };
 
+  const total = payments.reduce((sum, p) => sum + Number(p.monto || 0), 0);
+
   return (
-    <section className="page-container">
-      <div className="card">
-        <h1>HU-06 · Registro de Pagos</h1>
-        <p><Link to="/dashboard">← Volver al dashboard</Link></p>
-        <form className="grid" onSubmit={submit}>
-          <select name="appointmentId" value={form.appointmentId} onChange={onChange} required>
-            <option value="">Selecciona cita</option>
-            {appointments.map((item) => (
-              <option key={item.id} value={item.id}>#{item.id} · {new Date(item.fecha).toLocaleString()}</option>
-            ))}
-          </select>
-          <input name="monto" type="number" min="0" step="0.01" placeholder="Monto" value={form.monto} onChange={onChange} required />
-          <select name="metodoPago" value={form.metodoPago} onChange={onChange}>
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="otro">Otro</option>
-          </select>
-          <input name="fecha" type="datetime-local" value={form.fecha} onChange={onChange} required />
-          <input name="referencia" placeholder="Referencia (opcional)" value={form.referencia} onChange={onChange} />
-          <button type="submit">{editingId ? 'Actualizar' : 'Registrar'}</button>
-        </form>
-        {error ? <small className="error">{error}</small> : null}
+    <div>
+      <div className="page-header">
+        <h1>💳 Pagos</h1>
+        <p>Registro y historial de cobros</p>
       </div>
 
       <div className="card">
-        <h2>Historial</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Cita</th>
-              <th>Monto</th>
-              <th>Método</th>
-              <th>Fecha</th>
-              <th>Referencia</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.appointmentId}</td>
-                <td>${item.monto}</td>
-                <td>{item.metodoPago}</td>
-                <td>{new Date(item.fecha).toLocaleString()}</td>
-                <td>{item.referencia || '-'}</td>
-                <td>
-                  <button type="button" onClick={() => edit(item)}>Editar</button>{' '}
-                  <button type="button" className="danger" onClick={() => remove(item.id)}>Eliminar</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <h2>{editingId ? '✏️ Editar pago' : '➕ Registrar pago'}</h2>
+        <form className="form-grid" onSubmit={submit}>
+          <div className="form-group">
+            <label>Cita</label>
+            <select name="appointmentId" value={form.appointmentId} onChange={onChange} required>
+              <option value="">Selecciona la cita</option>
+              {appointments.map((a) => (
+                <option key={a.id} value={a.id}>
+                  #{a.id} · {a.client?.nombre || `Cliente ${a.clientId}`} — {new Date(a.fecha).toLocaleDateString('es-MX')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Monto ($)</label>
+            <input name="monto" type="number" min="0" step="0.01" placeholder="0.00"
+              value={form.monto} onChange={onChange} required />
+          </div>
+          <div className="form-group">
+            <label>Método de pago</label>
+            <select name="metodoPago" value={form.metodoPago} onChange={onChange}>
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="tarjeta">💳 Tarjeta</option>
+              <option value="transferencia">🏦 Transferencia</option>
+              <option value="otro">💰 Otro</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Fecha y hora</label>
+            <input name="fecha" type="datetime-local" value={form.fecha} onChange={onChange} required />
+          </div>
+          <div className="form-group">
+            <label>Referencia (opcional)</label>
+            <input name="referencia" placeholder="Nro. de operación..." value={form.referencia} onChange={onChange} />
+          </div>
+          <div className="form-group" style={{ alignSelf: 'end', display: 'flex', gap: '8px' }}>
+            <button type="submit" className="btn btn-primary">{editingId ? '💾 Actualizar' : '✨ Registrar'}</button>
+            {editingId && <button type="button" className="btn btn-outline" onClick={cancel}>Cancelar</button>}
+          </div>
+        </form>
+        {error && <div className="alert-error">⚠️ {error}</div>}
       </div>
-    </section>
+
+      {payments.length > 0 && (
+        <div style={{
+          background: 'var(--grad-primary)', borderRadius: 'var(--radius-md)',
+          padding: '16px 22px', marginBottom: 16, color: '#fff',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        }}>
+          <span style={{ fontWeight: 700, fontSize: '1rem' }}>💰 Total recaudado</span>
+          <span style={{ fontWeight: 900, fontSize: '1.5rem' }}>{formatCOP(total)}</span>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>📋 Historial</h2>
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Cita</th>
+                <th>Monto</th>
+                <th>Método</th>
+                <th>Fecha</th>
+                <th>Referencia</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.length === 0 ? (
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                  No hay pagos registrados
+                </td></tr>
+              ) : payments.map((item) => (
+                <tr key={item.id}>
+                  <td>Cita #{item.appointmentId}</td>
+                  <td><span className="amount">{formatCOP(item.monto)}</span></td>
+                  <td>
+                    <span className={`badge badge-${item.metodoPago}`}>
+                      {METODO_ICONS[item.metodoPago] || '💰'} {item.metodoPago}
+                    </span>
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {new Date(item.fecha).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}
+                  </td>
+                  <td>{item.referencia || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
+                  <td>
+                    <div className="btn-actions">
+                      <button className="btn btn-outline btn-sm" onClick={() => edit(item)}>✏️</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 };
